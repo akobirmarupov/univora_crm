@@ -9,7 +9,10 @@ class Company(BaseModel):
     industry = models.CharField(max_length=100, blank=True, null=True)
     website = models.URLField(blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
-
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="companies")
+    
+    
     class Meta:
         verbose_name = "Kompaniya"
         verbose_name_plural = "Kompaniyalar"

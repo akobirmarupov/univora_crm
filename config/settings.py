@@ -163,16 +163,6 @@ SWAGGER_SETTINGS = {
 FRONTEND_URL = "https://univora_crm.uz"
 
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        # Redis uchun:
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-    }
-}
-
-
 REST_FRAMEWORK = {
     # Pagination
     'DEFAULT_PAGINATION_CLASS': 'common.pagination.StandardPagination',
@@ -201,6 +191,17 @@ REST_FRAMEWORK = {
     # 'DEFAULT_PERMISSION_CLASSES': [
     #     'rest_framework.permissions.IsAuthenticated',
     # ],
+}
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",  # django.core.caches o'rniga
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
 }
 
 
