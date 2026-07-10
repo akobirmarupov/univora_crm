@@ -34,7 +34,6 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
  
     @property
     def is_admin_role(self) -> bool:
-        """common/permissions.py dagi is_admin(user) shu yerga tayanadi."""
         return self.role == RoleChoices.ADMIN
  
     @property

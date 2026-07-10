@@ -51,6 +51,7 @@ MIDDLEWARE = [
 LOCAL_APPS = [
     'account',
     'common',
+    'crm',
 ]
 
 
@@ -290,6 +291,17 @@ UNFOLD = {
                 "collapsible": False,
                 "items": [
                     {"title": "Xodimlar (Users)", "icon": "group", "link": "/admin/account/user/"},
+                ],
+            },
+            {
+            "title": "CRM",
+            "separator": True,
+            "collapsible": False,
+            "items": [
+                {"title": "Kompaniyalar", "icon": "business", "link": "/admin/crm/company/"},
+                {"title": "Kontaktlar", "icon": "person", "link": "/admin/crm/contact/"},
+                {"title": "Bosqichlar (Stages)", "icon": "view_column", "link": "/admin/crm/stage/"},
+                {"title": "Bitimlar (Deals)", "icon": "handshake", "link": "/admin/crm/deal/"},
                 ],
             },
           
