@@ -9,17 +9,19 @@ from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
 from crm.filters import CompanyFilter, StageFilter
 from drf_spectacular.utils import extend_schema
+from django.shortcuts import get_object_or_404
 
 from django.core.cache import cache
 import logging
 
 from crm.models import Company, Stage
-from common.permissions import IsAdmin, IsManager
+from common.permissions import IsAdmin, IsManager, IsAdminOrReadOnly
 from common.pagination import StandardPagination
 from crm.routes.company_stage.serializers import CompanySerializer, StageSerializer
 
 
 logger = logging.getLogger('company')
+stage_logger = logging.getLogger('stage')
 
 
 class CompanyListAPIView(APIView):
@@ -174,3 +176,5 @@ class CompanyDetailAPIView(APIView):
 
         logger.info(f"[DELETE] Company ID {pk} o'chirildi - user: {request.user}")
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+

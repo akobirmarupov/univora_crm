@@ -52,6 +52,7 @@ LOCAL_APPS = [
     'account',
     'common',
     'crm',
+    'tasks'
 ]
 
 
@@ -305,7 +306,15 @@ UNFOLD = {
                 {"title": "Bitimlar (Deals)", "icon": "handshake", "link": "/admin/crm/deal/"},
                 ],
             },
-          
+            {
+            "title": "Vazifalar",
+            "separator": True,
+            "collapsible": False,
+            "items": [
+                {"title": "Task'lar", "icon": "task_alt", "link": "/admin/tasks/task/"},
+                {"title": "Muloqot tarixi", "icon": "chat", "link": "/admin/tasks/activity/"},
+            ],
+        },
         ],
     },
 }   
