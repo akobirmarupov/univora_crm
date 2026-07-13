@@ -18,6 +18,7 @@ class CompanySerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
  
  
+ 
 class StageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stage
@@ -29,5 +30,3 @@ class StageSerializer(serializers.ModelSerializer):
             "updated_at"
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
- 
- 

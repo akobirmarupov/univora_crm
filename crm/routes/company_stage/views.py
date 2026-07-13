@@ -224,7 +224,6 @@ class StageListAPIView(APIView):
 
 class StgaeDetailAPIView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
-    queryset = Stage.objects.none()
     permission_classes = [IsAdmin]
 
 
@@ -238,7 +237,7 @@ class StgaeDetailAPIView(APIView):
 
     @extend_schema(summary="Bosqichlar tafsilotlari (Detail)", responses={200: StageSerializer}, tags=["Stage"])
     def get(self, request, pk):
-        stage = self.get_object(pk)
+        stage = self.get_object(pk=pk)
         
         if stage is None:
             return Response({"detail": "Bosqich topilmadi."}, status=status.HTTP_404_NOT_FOUND)

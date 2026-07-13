@@ -57,7 +57,10 @@ class Contact(BaseModel):
     )
     source = models.CharField(max_length=20, choices=SourceChoices.choices, default=SourceChoices.OTHER)
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.NEW)
-
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="contacts"
+    )
+    
     class Meta:
         verbose_name = "Kontakt"
         verbose_name_plural = "Kontaktlar"
