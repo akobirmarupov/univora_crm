@@ -175,6 +175,101 @@ class CompanyDetailAPIView(APIView):
             cache.set("company_cache_version", 1)
 
         logger.info(f"[DELETE] Company ID {pk} o'chirildi - user: {request.user}")
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Kompaniya muvaffaqiyatli o'chirildi."},status=status.HTTP_204_NO_CONTENT)
     
 
+
+class StageListAPIView(APIView):
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = StageFilter
+    search_fields = ['name1']
+    ordering_fields = ['order', 'created_at']
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdmin()]
+        return [(IsAdmin | IsManager)()]
+    
+
+    @extend_schema(summary="Barcha bosqichlar", responses={200: StageSerializer(many=True)}, tags=["Stage"])
+    def get(self, request):
+        queryset = Stage.objects.all().order_by('order')
+
+        for backend in self.filter_backends:
+            queryset = backend().filter_queryset(request, queryset, self)
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+
+        if page is not None:
+            serializer = StageSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        serializer = StageSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+    @extend_schema(summary="Yangi bosqich yaratish", request=StageSerializer, responses={201: StageSerializer}, tags=["Stage"])
+    def post(self, request):
+        serializer = StageSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            logger.info(f"[CREATE] Stage '{serializer.data['name']}' - user: {request.user}")
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class StgaeDetailAPIView(APIView):
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    queryset = Stage.objects.none()
+    permission_classes = [IsAdmin]
+
+
+    def get_object(self, pk):
+        try:
+            return Stage.objects.get(pk=pk)
+        except Stage.DoesNotExist:
+            return None
+        
+
+
+    @extend_schema(summary="Bosqichlar tafsilotlari (Detail)", responses={200: StageSerializer}, tags=["Stage"])
+    def get(self, request, pk):
+        stage = self.get_object(pk)
+        
+        if stage is None:
+            return Response({"detail": "Bosqich topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = StageSerializer(stage)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+    @extend_schema(summary="Bosqichni to'liq yangilash (PUT)", request=StageSerializer, responses={200: StageSerializer}, tags=["Stage"])
+    def put (self, request, pk):
+        stage = self.get_object(pk)
+        if stage is None:
+            return Response({"detail": "Bosqich topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = StageSerializer(stage, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            logger.info(f"[UPDATE-PUT] Stage ID {pk} yangilandi - user: {request.user}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+    @extend_schema(summary="Bosqichni o'chirish (DELETE)", responses={204: None}, tags=["Stage"])
+    def delete(self, request, pk):
+        stage = self.get_object(pk)
+        if stage is None:
+            return Response({"detail": "Bosqichni topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        stage.delete()
+        logger.info(f"[DELETE] Stage ID {pk} o'chirildi - user: {request.user}")
+        return Response({"detail": "Bosqich muvaffaqiyatli o'chirildi."}, status=status.HTTP_204_NO_CONTENT)
