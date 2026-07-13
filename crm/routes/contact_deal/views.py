@@ -15,7 +15,7 @@ import logging
 from crm.models import Contact, Deal
 from common.permissions import IsAdmin, IsManager, PermissionDenied
 from common.pagination import StandardPagination
-from crm.routes.contact_deal.serializers import ContactSerializer, DealSerializer, DealCreateUpdateSerializer
+from crm.routes.contact_deal.serializers import ContactSerializer, DealSerializer
 
 
 contact_logger = logging.getLogger('contact')
@@ -23,7 +23,7 @@ deal_logger = logging.getLogger('deal')
 
 
 class ContactListAPIView(APIView):
-    permission_classes = [JSONParser, MultiPartParser, FormParser]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = ContactFilter
@@ -70,7 +70,6 @@ class ContactListAPIView(APIView):
 
         return Response(ContactSerializer(contact).data, status=status.HTTP_201_CREATED)
     
-
 
 
 class ContactDetailAPIView(APIView):
@@ -163,3 +162,147 @@ class ContactDetailAPIView(APIView):
         contact_logger.info(f"[DELETE] Contact ID {pk} ({contact.full_name}) o'chirildi - user: {request.user}")
         contact.delete()
         return Response({"detail": "Contact muvaffaqiyatli o'chirildi."},status=status.HTTP_204_NO_CONTENT)
+
+
+
+class DealListAPIView(APIView):
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = DealFilter
+    search_fields = ['name', 'contact__full_name', 'contact__phone_number', 'contact__email', 'stage__name']
+    ordering_fields = ['name', 'amount', 'opened_at', 'closed_at']
+
+    def get_permissions(self):
+        return [(IsAdmin | IsManager)()]
+    
+
+
+    @extend_schema(summary="Barcha lid contactlari", responses={200: DealSerializer(many=True)}, tags=["Deal"])
+    def get(self, request):
+        queryset = Deal.objects.select_related("contact", "stage", "manager")
+
+        if request.user.role != "admin":
+            queryset = queryset.filter(manager=request.user)
+
+        for backend in list(self.filter_backends):
+            queryset = backend().filter_queryset(request, queryset, self)
+
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = DealSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+        
+
+    @extend_schema(summary="Yangi bitim yaratish", request=DealSerializer, responses={201: DealSerializer}, tags=["Deal"])
+    def post(self, request):
+        data = request.data.copy()
+        data.pop("manager_id", None)
+
+        serializer = DealSerializer(data=data)
+
+        if not serializer.is_valid():
+            deal_logger.warning(
+                f"[CREATE-FAILED] user={request.user} errors={serializer.errors}"
+            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        deal = serializer.save(manager=request.user)
+
+        deal_logger.info(
+            f"[CREATE] user={request.user} deal_id={deal.id} "
+            f"name={deal.name} amount={deal.amount}"
+        )
+
+        return Response(DealSerializer(deal).data, status=status.HTTP_201_CREATED)
+
+class DealDetailAPIView(APIView):
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    queryset = Deal.objects.none()
+
+
+    def get_permissions(self):
+        if self.request.method == 'DELETE':
+            return [IsAdmin()]
+        return [(IsAdmin | IsManager)()]
+
+
+    def get_object(self, request, pk):
+        try:
+            deal = Deal.objects.select_related("contact", "stage", "manager").get(pk=pk)
+        except Deal.DoesNotExist:
+            return None
+
+        if request.user.role != "admin" and deal.manager != request.user:
+            raise PermissionDenied("Bu bitim sizga tegishli emas.")
+
+        return deal
+
+
+    @extend_schema(summary="Bitim tafsilotlari (Detail)", responses={200: DealSerializer}, tags=["Deal"])
+    def get(self, request, pk):
+        deal = self.get_object(request, pk)
+
+        if deal is None:
+            return Response({"detail": "Bitim topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DealSerializer(deal)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    @extend_schema(summary="Bitimni to'liq yangilash (PUT)", request=DealSerializer, responses={200: DealSerializer}, tags=["Deal"])
+    def put(self, request, pk):
+        deal = self.get_object(request, pk)
+
+        if deal is None:
+            return Response({"detail": "Bitim topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        if "manager_id" in request.data and request.user.role != "admin":
+            return Response(
+                {"detail": "Faqat admin bitimni boshqa menejerga biriktira oladi."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = DealSerializer(deal, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            deal_logger.info(f"[UPDATE-PUT] Deal ID {pk} yangilandi - user: {request.user}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        deal_logger.warning(f"[UPDATE-FAILED] Deal ID {pk} - user: {request.user} errors={serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @extend_schema(summary="Bitimni qisman yangilash (PATCH)", request=DealSerializer, responses={200: DealSerializer}, tags=["Deal"])
+    def patch(self, request, pk):
+        deal = self.get_object(request, pk)
+
+        if deal is None:
+            return Response({"detail": "Bitim topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        if "manager_id" in request.data and request.user.role != "admin":
+            return Response(
+                {"detail": "Faqat admin bitimni boshqa menejerga biriktira oladi."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = DealSerializer(deal, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            deal_logger.info(f"[UPDATE-PATCH] Deal ID {pk} yangilandi - user: {request.user}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        deal_logger.warning(f"[UPDATE-FAILED] Deal ID {pk} - user: {request.user} errors={serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @extend_schema(summary="Bitimni o'chirish (DELETE)", responses={204: None}, tags=["Deal"])
+    def delete(self, request, pk):
+        deal = self.get_object(request, pk)
+
+        if deal is None:
+            return Response({"detail": "Bitim topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        deal_logger.info(f"[DELETE] Deal ID {pk} ({deal.name}) o'chirildi - user: {request.user}")
+        deal.delete()
+        return Response({"detail": "Bitim muvaffaqiyatli o'chirildi."}, status=status.HTTP_204_NO_CONTENT)

@@ -58,50 +58,27 @@ class ContactShortSerializer(serializers.ModelSerializer):
         model = Contact
         fields = ["id", "full_name", "phone_number"]
  
- 
-class DealSerializer(serializers.ModelSerializer): 
+class DealSerializer(serializers.ModelSerializer):
     contact = ContactShortSerializer(read_only=True)
-    contact_id = serializers.PrimaryKeyRelatedField(
-        queryset=Contact.objects.all(), source="contact", write_only=True)
+    contact_id = serializers.PrimaryKeyRelatedField(queryset=Contact.objects.all(), source="contact", write_only=True)
     stage = StageShortSerializer(read_only=True)
-    stage_id = serializers.PrimaryKeyRelatedField(
-        queryset=Stage.objects.all(), source="stage", write_only=True)
+    stage_id = serializers.PrimaryKeyRelatedField(queryset=Stage.objects.all(), source="stage", write_only=True)
     manager = UserShortSerializer(read_only=True)
-    manager_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
-        source="manager",
-        write_only=True,
-        required=False,
-        allow_null=True,)
- 
+    manager_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(),source="manager",write_only=True,required=False,allow_null=True,)
+
     class Meta:
         model = Deal
         fields = [
-            "id",
-            "name",
-            "contact",
-            "contact_id",
+            "id", "name",
+            "contact", "contact_id",
             "amount",
-            "stage",
-            "stage_id",
-            "manager",
-            "manager_id",
-            "opened_at",
-            "closed_at",
+            "stage", "stage_id",
+            "manager", "manager_id",
+            "opened_at", "closed_at",
         ]
-        read_only_fields = ["id", "opened_at"]
- 
- 
-class DealCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Deal
-        fields = [
-            "id",
-            "name",
-            "contact",
-            "amount",
-            "stage",
-            "manager",
-            "closed_at",
-        ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "opened_at", "closed_at"]
+
+    def validate_amount(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Summa manfiy bo'lishi mumkin emas.")
+        return value

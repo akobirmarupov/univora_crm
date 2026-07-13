@@ -4,7 +4,10 @@ from crm.routes.company_stage.views import (
     CompanyListAPIView, CompanyDetailAPIView,
     StageListAPIView, StgaeDetailAPIView
 )
-from crm.routes.contact_deal.views import ContactListAPIView, ContactDetailAPIView
+from crm.routes.contact_deal.views import (
+    ContactListAPIView, ContactDetailAPIView,
+    DealListAPIView, DealDetailAPIView
+)
 
 
 urlpatterns = [
@@ -16,4 +19,7 @@ urlpatterns = [
 
     path("contact/", ContactListAPIView.as_view(), name="contact-list"),
     path("contact/<int:pk>/", ContactDetailAPIView.as_view(), name="contact-detail"),
+
+    path("deal/", DealListAPIView.as_view(), name="deal-list"),
+    path("deal/<int:pk>/", DealDetailAPIView.as_view(), name="deal-detail"),
 ]
