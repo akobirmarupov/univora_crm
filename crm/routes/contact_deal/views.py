@@ -13,7 +13,7 @@ from drf_spectacular.utils import extend_schema
 import logging
 
 from crm.models import Contact, Deal
-from common.permissions import IsAdmin, IsManager, PermissionDenied
+from common.permissions import IsEmployee, IsManager, PermissionDenied
 from common.pagination import StandardPagination
 from crm.routes.contact_deal.serializers import ContactSerializer, DealSerializer
 
@@ -31,7 +31,7 @@ class ContactListAPIView(APIView):
     ordering_fields = ['full_name', 'created_at', 'status']
 
     def get_permissions(self):
-        return [(IsAdmin | IsManager)()]
+        return [(IsManager | IsEmployee)()]
 
 
     @extend_schema(summary="Barcha lid contactlari", responses={200: ContactSerializer(many=True)}, tags=["Contact"])
@@ -79,8 +79,8 @@ class ContactDetailAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
-            return [IsAdmin()]
-        return [(IsAdmin | IsManager)()]
+            return [IsManager()]
+        return [(IsManager | IsEmployee)()]
     
 
     def get_object(self, request, pk):
@@ -174,7 +174,7 @@ class DealListAPIView(APIView):
     ordering_fields = ['name', 'amount', 'opened_at', 'closed_at']
 
     def get_permissions(self):
-        return [(IsAdmin | IsManager)()]
+        return [(IsManager | IsEmployee)()]
     
 
 
@@ -223,8 +223,8 @@ class DealDetailAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
-            return [IsAdmin()]
-        return [(IsAdmin | IsManager)()]
+            return [IsManager()]
+        return [(IsManager | IsEmployee)()]
 
 
     def get_object(self, request, pk):

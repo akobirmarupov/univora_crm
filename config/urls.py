@@ -33,6 +33,7 @@ urlpatterns = [
 
    path('account/', include('account.urls')),
    path('', include('crm.urls')),
+   path('', include('tasks.urls'))
 ]
 
 

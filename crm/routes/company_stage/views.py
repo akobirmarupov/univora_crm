@@ -15,7 +15,7 @@ from django.core.cache import cache
 import logging
 
 from crm.models import Company, Stage
-from common.permissions import IsAdmin, IsManager, IsAdminOrReadOnly
+from common.permissions import IsEmployee, IsManager, IsManagernOrReadOnly
 from common.pagination import StandardPagination
 from crm.routes.company_stage.serializers import CompanySerializer, StageSerializer
 
@@ -34,8 +34,8 @@ class CompanyListAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [(IsAdmin | IsManager)()]
-        return [(IsAdmin | IsManager)()]
+            return [(IsManager | IsEmployee)()]
+        return [(IsManager | IsEmployee)()]
     
         
     @extend_schema(summary="Barcha lidlar", responses={200: CompanySerializer(many=True)}, tags=["Company"])
@@ -48,7 +48,7 @@ class CompanyListAPIView(APIView):
         if data is None:
             queryset = Company.objects.all().order_by('name')
 
-            if not IsAdmin().has_permission(request, self):
+            if not IsManager().has_permission(request, self):
                 queryset = queryset.filter(created_by=user)
 
             for backend in self.filter_backends:
@@ -84,12 +84,12 @@ class CompanyListAPIView(APIView):
 
 class CompanyDetailAPIView(APIView):
     parser_classes = [JSONParser, FormParser, MultiPartParser]
-    permission_classes = [IsAdmin | IsManager]
+    permission_classes = [IsManager | IsEmployee]
 
     def get_object(self, pk, request):
         try:
             company = Company.objects.get(pk=pk)
-            if not IsAdmin().has_permission(request, self) and company.created_by != request.user:
+            if not IsManager().has_permission(request, self) and company.created_by != request.user:
                 return None
             return company
         except Company.DoesNotExist:
@@ -189,8 +189,8 @@ class StageListAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == 'POST':
-            return [IsAdmin()]
-        return [(IsAdmin | IsManager)()]
+            return [IsManager]
+        return [(IsManager | IsEmployee)()]
     
 
     @extend_schema(summary="Barcha bosqichlar", responses={200: StageSerializer(many=True)}, tags=["Stage"])
@@ -224,7 +224,7 @@ class StageListAPIView(APIView):
 
 class StgaeDetailAPIView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
-    permission_classes = [IsAdmin]
+    permission_classes = [IsManager]
 
 
     def get_object(self, pk):
