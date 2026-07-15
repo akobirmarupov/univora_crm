@@ -22,6 +22,9 @@ class Company(BaseModel):
 
 
 class Stage(BaseModel):
+    WON_STAGE_NAME = "Yutildi"
+    LOST_STAGE_NAME = "Yo'qotildi"
+
     name = models.CharField(max_length=100)
     order = models.PositiveIntegerField(default=0)
 
@@ -50,7 +53,7 @@ class StatusChoices(models.TextChoices):
 
 class Contact(BaseModel):
     full_name = models.CharField(max_length=150)
-    phone_number = models.CharField(max_length=20)
+    phone_number = models.CharField(max_length=20, unique=True)
     email = models.EmailField(blank=True, null=True)
     company = models.ForeignKey(
         Company, on_delete=models.SET_NULL, null=True, blank=True, related_name="contacts"
@@ -86,3 +89,11 @@ class Deal(BaseModel):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_won(self):
+        return self.closed_at is not None and self.stage.name == Stage.WON_STAGE_NAME
+
+    @property
+    def is_lost(self):
+        return self.closed_at is not None and self.stage.name == Stage.LOST_STAGE_NAME

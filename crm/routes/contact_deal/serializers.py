@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from account.models import User
 from crm.models import Company, Stage, Contact, Deal
@@ -22,7 +23,15 @@ class StageShortSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "order"]
  
  
-class ContactSerializer(serializers.ModelSerializer): 
+class ContactSerializer(serializers.ModelSerializer):
+    phone_number = serializers.CharField(
+        validators=[
+            UniqueValidator(
+                queryset=Contact.objects.all(),
+                message="Bu telefon raqami bilan kontakt allaqachon mavjud."
+            )
+        ]
+    )
     company = CompanyShortSerializer(read_only=True)
     company_id = serializers.PrimaryKeyRelatedField(
         queryset=Company.objects.all(),
@@ -33,25 +42,25 @@ class ContactSerializer(serializers.ModelSerializer):
     )
     source_display = serializers.CharField(source="get_source_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
- 
+
     class Meta:
         model = Contact
         fields = [
-            "id",
-            "full_name",
-            "phone_number",
-            "email",
-            "company",
-            "company_id",
-            "source",
-            "source_display",
-            "status",
-            "status_display",
-            "created_at",
-            "updated_at",
+            "id", "full_name", "phone_number", "email",
+            "company", "company_id", "source", "source_display",
+            "status", "status_display", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
- 
+
+    def validate_email(self, value):
+        if not value:
+            return value
+        qs = Contact.objects.filter(email__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Bu email bilan kontakt allaqachon mavjud.")
+        return value
  
 class ContactShortSerializer(serializers.ModelSerializer): 
     class Meta:
@@ -82,3 +91,9 @@ class DealSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("Summa manfiy bo'lishi mumkin emas.")
         return value
+    
+
+class DealCloseSerializer(serializers.Serializer):
+    result = serializers.ChoiceField(
+        choices=[("won", "Yutildi"), ("lost", "Yo'qotildi")]
+    )

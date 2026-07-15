@@ -4,6 +4,7 @@ from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils import timezone
 from rest_framework import status
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -12,16 +13,12 @@ from drf_spectacular.utils import extend_schema
 
 import logging
 
-from crm.models import Contact, Deal
+from crm.models import Contact, Deal, Stage
 from common.permissions import (
-    IsEmployee,
-    IsManager,
-    PermissionDenied,
-    check_object_permission,
-    get_visible_queryset,
-)
+    IsEmployee, IsManager, PermissionDenied,
+    check_object_permission, get_visible_queryset)
 from common.pagination import StandardPagination
-from crm.routes.contact_deal.serializers import ContactSerializer, DealSerializer
+from crm.routes.contact_deal.serializers import ContactSerializer, DealSerializer, DealCloseSerializer
 
 
 contact_logger = logging.getLogger('contact')
@@ -201,6 +198,53 @@ class DealListAPIView(APIView):
         )
 
         return Response(DealSerializer(deal).data, status=status.HTTP_201_CREATED)
+
+
+
+class DealCloseAPIView(APIView):
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
+
+    def get_permissions(self):
+        return [(IsManager | IsEmployee)()]
+
+    def get_object(self, request, pk):
+        try:
+            deal = Deal.objects.select_related("contact", "stage", "manager").get(pk=pk)
+        except Deal.DoesNotExist:
+            return None
+        check_object_permission(request.user, deal, owner_field="manager")
+        return deal
+    
+
+    @extend_schema(summary="Bitimni yakunlash (Yutildi/Yo'qotildi)",request=DealCloseSerializer,responses={200: DealSerializer},tags=["Deal"],)
+    def post(self, request, pk):
+        deal = self.get_object(request, pk)
+        if deal is None:
+            return Response({"detail": "Bitim topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        if deal.closed_at is not None:
+            return Response(
+                {"detail": "Bitim allaqachon yakunlangan."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = DealCloseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = serializer.validated_data["result"]
+
+        stage_name = Stage.WON_STAGE_NAME if result == "won" else Stage.LOST_STAGE_NAME
+        stage, _ = Stage.objects.get_or_create(
+            name=stage_name,
+            defaults={"order": 999},
+        )
+
+        deal.stage = stage
+        deal.closed_at = timezone.now().date()
+        deal.save(update_fields=["stage", "closed_at", "updated_at"])
+
+        deal_logger.info(f"[CLOSE] Deal ID {pk} -> {result} - user: {request.user}")
+        return Response(DealSerializer(deal).data, status=status.HTTP_200_OK)
+
 
 
 class DealDetailAPIView(APIView):
