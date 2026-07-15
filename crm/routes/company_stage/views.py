@@ -176,7 +176,7 @@ class StageListAPIView(APIView):
     pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = StageFilter
-    search_fields = ['name1']
+    search_fields = ['name']
     ordering_fields = ['order', 'created_at']
 
     def get_permissions(self):

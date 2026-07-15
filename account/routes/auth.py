@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from common.throttles import LoginThrottle
 import re
  
 from account.routes.serializer import LoginSerializer, LogoutSerializer, UserShortSerializer
@@ -14,6 +15,7 @@ _PHONE_RE = re.compile(r"^\+?\d{9,15}$")
 
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [LoginThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)

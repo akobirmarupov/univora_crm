@@ -26,7 +26,7 @@ urlpatterns = [
     path("deal/<int:pk>/", DealDetailAPIView.as_view(), name="deal-detail"),
     path("deal/<int:pk>/close/", DealCloseAPIView.as_view(), name="deal-close"),
 
-    path('contaxt/export/', ContactExportAPIView.as_view(), name='contaxt-export'),
+    path('contact/export/', ContactExportAPIView.as_view(), name='contact-export'),
     path('deals/export/', DealExportAPIView.as_view(), name='deal-export'),
 
     path("dashboard/", DashboardAPIView.as_view(), name="dashboard"),
