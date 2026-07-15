@@ -24,6 +24,7 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['univora-crm.onrender.com', '127.0.0.1', 'localhost', '*']
 
+
 AUTH_USER_MODEL = 'account.User'
 
 # Application definition
