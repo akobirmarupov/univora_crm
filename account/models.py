@@ -7,15 +7,15 @@ from .manager import UserManager
 
 
 class RoleChoices(models.TextChoices):
-    ADMIN = "admin", "Admin"
     MANAGER = "manager", "Menejer"
+    EMPLOYEE = "employee", "Employee"
 
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     email = models.EmailField(blank=True, null=True, unique=True)
     full_name = models.CharField(max_length=60, null=True, blank=True)
     phone_number = models.CharField(max_length=14, unique=True, null=False, blank=False)
-    role = models.CharField(max_length=20, choices=RoleChoices.choices, default=RoleChoices.MANAGER)
+    role = models.CharField(max_length=20, choices=RoleChoices.choices, default=RoleChoices.EMPLOYEE)
     is_confirmed = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
