@@ -13,7 +13,13 @@ from drf_spectacular.utils import extend_schema
 import logging
 
 from tasks.models import Task
-from common.permissions import IsEmployee, IsManager, PermissionDenied
+from common.permissions import (
+    IsEmployee,
+    IsManager,
+    PermissionDenied,
+    check_object_permission,
+    get_visible_queryset,
+)
 from common.pagination import StandardPagination
 from tasks.routes.serializers import TaskSerializer
 
@@ -31,13 +37,10 @@ class TaskListAPIView(APIView):
     def get_permissions(self):
         return [(IsManager | IsEmployee)()]
 
-
     @extend_schema(summary="Barcha vazifalar", responses={200: TaskSerializer(many=True)}, tags=["Task"])
     def get(self, request):
         queryset = Task.objects.select_related("contact", "deal", "assigned_to")
-
-        if request.user.role != "admin":
-            queryset = queryset.filter(assigned_to=request.user)
+        queryset = get_visible_queryset(request.user, queryset, owner_field="assigned_to")
 
         for backend in list(self.filter_backends):
             queryset = backend().filter_queryset(request, queryset, self)
@@ -47,14 +50,13 @@ class TaskListAPIView(APIView):
         serializer = TaskSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-
     @extend_schema(summary="Yangi task yaratish", request=TaskSerializer, responses={201: TaskSerializer}, tags=["Task"])
     def post(self, request):
         data = request.data.copy()
 
-        if "assigned_to_id" in data and request.user.role != "admin":
+        if "assigned_to_id" in data and not (request.user.role in ("admin", "manager")):
             return Response(
-                {"detail": "Faqat admin taskni boshqa menejerga biriktira oladi."},
+                {"detail": "Faqat admin va manager taskni boshqa xodimga biriktira oladi."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -66,7 +68,6 @@ class TaskListAPIView(APIView):
             )
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # oddiy manager uchun har doim o'ziga, admin uchun serializer'dagi qiymat (agar bergan bo'lsa)
         assigned_to = serializer.validated_data.get("assigned_to", request.user)
         task = serializer.save(assigned_to=assigned_to)
 
@@ -92,9 +93,7 @@ class TaskDetailAPIView(APIView):
         except Task.DoesNotExist:
             return None
 
-        if request.user.role != "admin" and task.assigned_to != request.user:
-            raise PermissionDenied("Bu vazifa sizga tegishli emas.")
-
+        check_object_permission(request.user, task, owner_field="assigned_to")
         return task
 
     @extend_schema(summary="Task tafsilotlari (Detail)", responses={200: TaskSerializer}, tags=["Task"])
@@ -114,9 +113,9 @@ class TaskDetailAPIView(APIView):
         if task is None:
             return Response({"detail": "Task topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
-        if "assigned_to_id" in request.data and request.user.role != "admin":
+        if "assigned_to_id" in request.data and not (request.user.role in ("admin", "manager")):
             return Response(
-                {"detail": "Faqat admin taskni boshqa menejerga biriktira oladi."},
+                {"detail": "Faqat admin va manager taskni boshqa xodimga biriktira oladi."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -136,9 +135,9 @@ class TaskDetailAPIView(APIView):
         if task is None:
             return Response({"detail": "Task topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
-        if "assigned_to_id" in request.data and request.user.role != "admin":
+        if "assigned_to_id" in request.data and not (request.user.role in ("admin", "manager")):
             return Response(
-                {"detail": "Faqat admin taskni boshqa menejerga biriktira oladi."},
+                {"detail": "Faqat admin va manager taskni boshqa xodimga biriktira oladi."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

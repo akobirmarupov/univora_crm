@@ -13,7 +13,13 @@ from drf_spectacular.utils import extend_schema
 import logging
 
 from crm.models import Contact, Deal
-from common.permissions import IsEmployee, IsManager, PermissionDenied
+from common.permissions import (
+    IsEmployee,
+    IsManager,
+    PermissionDenied,
+    check_object_permission,
+    get_visible_queryset,
+)
 from common.pagination import StandardPagination
 from crm.routes.contact_deal.serializers import ContactSerializer, DealSerializer
 
@@ -33,13 +39,10 @@ class ContactListAPIView(APIView):
     def get_permissions(self):
         return [(IsManager | IsEmployee)()]
 
-
     @extend_schema(summary="Barcha lid contactlari", responses={200: ContactSerializer(many=True)}, tags=["Contact"])
     def get(self, request):
         queryset = Contact.objects.select_related("company")
-
-        if request.user.role != "admin":
-            queryset = queryset.filter(created_by=request.user)
+        queryset = get_visible_queryset(request.user, queryset, owner_field="created_by")
 
         for backend in list(self.filter_backends):
             queryset = backend().filter_queryset(request, queryset, self)
@@ -48,8 +51,6 @@ class ContactListAPIView(APIView):
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = ContactSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
-    
-
 
     @extend_schema(summary="Yangi Contact yaratish", request=ContactSerializer, responses={201: ContactSerializer}, tags=["Contact"])
     def post(self, request):
@@ -69,19 +70,16 @@ class ContactListAPIView(APIView):
         )
 
         return Response(ContactSerializer(contact).data, status=status.HTTP_201_CREATED)
-    
 
 
 class ContactDetailAPIView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     queryset = Contact.objects.none()
 
-
     def get_permissions(self):
         if self.request.method == 'DELETE':
             return [IsManager()]
         return [(IsManager | IsEmployee)()]
-    
 
     def get_object(self, request, pk):
         try:
@@ -89,11 +87,8 @@ class ContactDetailAPIView(APIView):
         except Contact.DoesNotExist:
             return None
 
-        if request.user.role != "admin" and contact.created_by != request.user:
-            raise PermissionDenied("Bu contact sizga tegishli emas.")
-
+        check_object_permission(request.user, contact, owner_field="created_by")
         return contact
-    
 
     @extend_schema(summary="Contact tafsilotlari (Detail)", responses={200: ContactSerializer}, tags=["Contact"])
     def get(self, request, pk):
@@ -101,10 +96,9 @@ class ContactDetailAPIView(APIView):
 
         if contact is None:
             return Response({"detail": "Contact topilmadi."}, status=status.HTTP_404_NOT_FOUND)
-        
+
         serializer = ContactSerializer(contact)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
 
     @extend_schema(summary="Contactni to'liq yangilash (PUT)", request=ContactSerializer, responses={200: ContactSerializer}, tags=["Contact"])
     def put(self, request, pk):
@@ -113,9 +107,9 @@ class ContactDetailAPIView(APIView):
         if contact is None:
             return Response({"detail": "Contact topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
-        if "created_by_id" in request.data and request.user.role != "admin":
+        if "created_by_id" in request.data and not (request.user.role in ("admin", "manager")):
             return Response(
-                {"detail": "Faqat admin contact'ni boshqa menejerga biriktira oladi."},
+                {"detail": "Faqat admin va manager contact'ni boshqa xodimga biriktira oladi."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -128,7 +122,6 @@ class ContactDetailAPIView(APIView):
         contact_logger.warning(f"[UPDATE-FAILED] Contact ID {pk} - user: {request.user} errors={serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     @extend_schema(summary="Contactni qisman yangilash (PATCH)", request=ContactSerializer, responses={200: ContactSerializer}, tags=["Contact"])
     def patch(self, request, pk):
         contact = self.get_object(request, pk)
@@ -136,9 +129,9 @@ class ContactDetailAPIView(APIView):
         if contact is None:
             return Response({"detail": "Contact topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
-        if "created_by_id" in request.data and request.user.role != "admin":
+        if "created_by_id" in request.data and not (request.user.role in ("admin", "manager")):
             return Response(
-                {"detail": "Faqat admin contact'ni boshqa menejerga biriktira oladi."},
+                {"detail": "Faqat admin va manager contact'ni boshqa xodimga biriktira oladi."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -151,7 +144,6 @@ class ContactDetailAPIView(APIView):
         contact_logger.warning(f"[UPDATE-FAILED] Contact ID {pk} - user: {request.user} errors={serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     @extend_schema(summary="Contactni o'chirish (DELETE)", responses={204: None}, tags=["Contact"])
     def delete(self, request, pk):
         contact = self.get_object(request, pk)
@@ -161,8 +153,7 @@ class ContactDetailAPIView(APIView):
 
         contact_logger.info(f"[DELETE] Contact ID {pk} ({contact.full_name}) o'chirildi - user: {request.user}")
         contact.delete()
-        return Response({"detail": "Contact muvaffaqiyatli o'chirildi."},status=status.HTTP_204_NO_CONTENT)
-
+        return Response({"detail": "Contact muvaffaqiyatli o'chirildi."}, status=status.HTTP_204_NO_CONTENT)
 
 
 class DealListAPIView(APIView):
@@ -175,15 +166,11 @@ class DealListAPIView(APIView):
 
     def get_permissions(self):
         return [(IsManager | IsEmployee)()]
-    
-
 
     @extend_schema(summary="Barcha lid contactlari", responses={200: DealSerializer(many=True)}, tags=["Deal"])
     def get(self, request):
         queryset = Deal.objects.select_related("contact", "stage", "manager")
-
-        if request.user.role != "admin":
-            queryset = queryset.filter(manager=request.user)
+        queryset = get_visible_queryset(request.user, queryset, owner_field="manager")
 
         for backend in list(self.filter_backends):
             queryset = backend().filter_queryset(request, queryset, self)
@@ -192,7 +179,6 @@ class DealListAPIView(APIView):
         page = paginator.paginate_queryset(queryset, request, view=self)
         serializer = DealSerializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
-        
 
     @extend_schema(summary="Yangi bitim yaratish", request=DealSerializer, responses={201: DealSerializer}, tags=["Deal"])
     def post(self, request):
@@ -216,16 +202,15 @@ class DealListAPIView(APIView):
 
         return Response(DealSerializer(deal).data, status=status.HTTP_201_CREATED)
 
+
 class DealDetailAPIView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     queryset = Deal.objects.none()
-
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
             return [IsManager()]
         return [(IsManager | IsEmployee)()]
-
 
     def get_object(self, request, pk):
         try:
@@ -233,11 +218,8 @@ class DealDetailAPIView(APIView):
         except Deal.DoesNotExist:
             return None
 
-        if request.user.role != "admin" and deal.manager != request.user:
-            raise PermissionDenied("Bu bitim sizga tegishli emas.")
-
+        check_object_permission(request.user, deal, owner_field="manager")
         return deal
-
 
     @extend_schema(summary="Bitim tafsilotlari (Detail)", responses={200: DealSerializer}, tags=["Deal"])
     def get(self, request, pk):
@@ -249,7 +231,6 @@ class DealDetailAPIView(APIView):
         serializer = DealSerializer(deal)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
     @extend_schema(summary="Bitimni to'liq yangilash (PUT)", request=DealSerializer, responses={200: DealSerializer}, tags=["Deal"])
     def put(self, request, pk):
         deal = self.get_object(request, pk)
@@ -257,9 +238,9 @@ class DealDetailAPIView(APIView):
         if deal is None:
             return Response({"detail": "Bitim topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
-        if "manager_id" in request.data and request.user.role != "admin":
+        if "manager_id" in request.data and not (request.user.role in ("admin", "manager")):
             return Response(
-                {"detail": "Faqat admin bitimni boshqa menejerga biriktira oladi."},
+                {"detail": "Faqat admin va manager bitimni boshqa xodimga biriktira oladi."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -272,7 +253,6 @@ class DealDetailAPIView(APIView):
         deal_logger.warning(f"[UPDATE-FAILED] Deal ID {pk} - user: {request.user} errors={serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     @extend_schema(summary="Bitimni qisman yangilash (PATCH)", request=DealSerializer, responses={200: DealSerializer}, tags=["Deal"])
     def patch(self, request, pk):
         deal = self.get_object(request, pk)
@@ -280,9 +260,9 @@ class DealDetailAPIView(APIView):
         if deal is None:
             return Response({"detail": "Bitim topilmadi."}, status=status.HTTP_404_NOT_FOUND)
 
-        if "manager_id" in request.data and request.user.role != "admin":
+        if "manager_id" in request.data and not (request.user.role in ("admin", "manager")):
             return Response(
-                {"detail": "Faqat admin bitimni boshqa menejerga biriktira oladi."},
+                {"detail": "Faqat admin va manager bitimni boshqa xodimga biriktira oladi."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -294,7 +274,6 @@ class DealDetailAPIView(APIView):
 
         deal_logger.warning(f"[UPDATE-FAILED] Deal ID {pk} - user: {request.user} errors={serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
     @extend_schema(summary="Bitimni o'chirish (DELETE)", responses={204: None}, tags=["Deal"])
     def delete(self, request, pk):

@@ -7,8 +7,9 @@ from .manager import UserManager
 
 
 class RoleChoices(models.TextChoices):
+    ADMIN = "admin", "Admin"
     MANAGER = "manager", "Menejer"
-    EMPLOYEE = "employee", "Employee"
+    EMPLOYEE = "employee", "Xodim"
 
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
@@ -28,15 +29,18 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     class Meta:
         verbose_name = "Xodim"
         verbose_name_plural = "Xodimlar"
- 
+
     def __str__(self):
         return self.full_name or self.phone_number
- 
+
     @property
     def is_admin_role(self) -> bool:
         return self.role == RoleChoices.ADMIN
- 
+
     @property
     def is_manager_role(self) -> bool:
         return self.role == RoleChoices.MANAGER
- 
+
+    @property
+    def is_employee_role(self) -> bool:
+        return self.role == RoleChoices.EMPLOYEE
