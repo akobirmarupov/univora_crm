@@ -22,7 +22,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['univora-crm.onrender.com', '127.0.0.1', 'localhost', '*']
 
 AUTH_USER_MODEL = 'account.User'
 
