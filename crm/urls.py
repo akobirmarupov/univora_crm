@@ -8,7 +8,6 @@ from crm.routes.contact_deal.views import (
     ContactListAPIView, ContactDetailAPIView,
     DealListAPIView, DealDetailAPIView, DealCloseAPIView
 )
-from crm.routes.contact_deal.export_views import ContactExportAPIView, DealExportAPIView
 from crm.routes.dashboard.views import DashboardAPIView
 
 
@@ -25,9 +24,6 @@ urlpatterns = [
     path("deal/", DealListAPIView.as_view(), name="deal-list"),
     path("deal/<int:pk>/", DealDetailAPIView.as_view(), name="deal-detail"),
     path("deal/<int:pk>/close/", DealCloseAPIView.as_view(), name="deal-close"),
-
-    path('contact/export/', ContactExportAPIView.as_view(), name='contact-export'),
-    path('deals/export/', DealExportAPIView.as_view(), name='deal-export'),
 
     path("dashboard/", DashboardAPIView.as_view(), name="dashboard"),
 ]
