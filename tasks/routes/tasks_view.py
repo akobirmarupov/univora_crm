@@ -14,12 +14,8 @@ import logging
 
 from tasks.models import Task
 from common.permissions import (
-    IsEmployee,
-    IsManager,
-    PermissionDenied,
-    check_object_permission,
-    get_visible_queryset,
-)
+    IsEmployee, IsManager, IsAdmin,
+    check_object_permission,get_visible_queryset)
 from common.pagination import StandardPagination
 from tasks.routes.serializers import TaskSerializer
 
@@ -35,7 +31,7 @@ class TaskListAPIView(APIView):
     ordering_fields = ['due_date', 'created_at', 'is_done']
 
     def get_permissions(self):
-        return [(IsManager | IsEmployee)()]
+        return [(IsAdmin | IsManager | IsEmployee)()]
 
     @extend_schema(summary="Barcha vazifalar", responses={200: TaskSerializer(many=True)}, tags=["Task"])
     def get(self, request):
@@ -84,8 +80,8 @@ class TaskDetailAPIView(APIView):
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
-            return [IsManager()]
-        return [(IsManager | IsEmployee)()]
+            return [(IsAdmin | IsManager)()]
+        return [(IsAdmin | IsManager | IsEmployee)()]
 
     def get_object(self, request, pk):
         try:

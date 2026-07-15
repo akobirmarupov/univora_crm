@@ -22,7 +22,7 @@ class TaskAdmin(ModelAdmin):
         'deadline_badge',
     )
     list_filter = ('is_done', 'assigned_to', 'due_date')
-    search_fields = ('description', 'contact__name', 'deal__name', 'assigned_to__email')
+    search_fields = ('note', 'contact__full_name', 'user__phone_number')
     autocomplete_fields = ('contact', 'deal', 'assigned_to')
     list_select_related = ('contact', 'deal', 'assigned_to')
     date_hierarchy = 'due_date'

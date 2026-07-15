@@ -28,7 +28,7 @@ class Activity(BaseModel):
     ]
 
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name='activities')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')  # 👈 qo'shildi
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
     activity_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     note = models.TextField()
 
