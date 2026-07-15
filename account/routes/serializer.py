@@ -15,7 +15,7 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Telefon raqam yoki parol xato.")
         
         if not user.is_active:
-            raise serializers.ValidationError("Bu foydalanuvchi faol emas.")
+            raise serializers.ValidationError("Bu foydalanuvchi mavjud emas.")
         
         attrs['user'] = user
         return attrs

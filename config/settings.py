@@ -150,6 +150,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 SWAGGER_SETTINGS = {
+    'DEFAULT_FILTER_INSPECTORS': [
+        'crm.inspectors.SafeDjangoFilterInspector',  # Faqat shu bitta xavfsiz klass qoladi
+    ],
     'DEFAULT_API_URL': 'https://c87089dbf506e1bd-84-94-248.serveousercontent.com',
     'SECURITY_DEFINITIONS': {
         'Bearer': {

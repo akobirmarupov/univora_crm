@@ -32,6 +32,7 @@ class ActivaListAPIView(APIView):
     filterset_class = ActivityFilter
     search_fields = ['activity_type']
     ordering_fields = ['activity_type', 'created_at']
+    queryset = None
 
 
     def get_permissions(self):
