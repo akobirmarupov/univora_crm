@@ -171,6 +171,13 @@ SWAGGER_SETTINGS = {
 FRONTEND_URL = "https://univora_crm.uz"
 
 
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+
 REST_FRAMEWORK = {
     # Pagination
     'DEFAULT_PAGINATION_CLASS': 'common.pagination.StandardPagination',
@@ -213,14 +220,11 @@ SIMPLE_JWT = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",  # django.core.caches o'rniga
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        }
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     }
 }
-
 
 
 UNFOLD = {
